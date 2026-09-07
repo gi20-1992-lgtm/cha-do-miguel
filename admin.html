@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Administração - Chá do Miguel</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #eef8ff;
+      color: #17324d;
+    }
+
+    header {
+      background: linear-gradient(135deg, #4aa3d8, #277fba);
+      color: white;
+      padding: 30px 20px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 18px;
+      padding: 25px;
+      margin-bottom: 25px;
+      box-shadow: 0 5px 20px rgba(0,0,0,.08);
+    }
+
+    .login {
+      max-width: 450px;
+      margin: 40px auto;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      margin: 8px 0 15px;
+      border: 2px solid #c9e7f8;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .btn-login,
+    .btn-save {
+      background: #2785bf;
+      color: white;
+    }
+
+    .btn-logout {
+      background: #e45757;
+      color: white;
+      float: right;
+    }
+
+    .btn-release {
+      background: #f0a62b;
+      color: white;
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .stats {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+
+    .stat {
+      background: #f5fbff;
+      padding: 15px 20px;
+      border-radius: 12px;
+      font-weight: bold;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #e4edf3;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      background: #e9f6fd;
+    }
+
+    td input {
+      margin: 0;
+      min-width: 130px;
+    }
+
+    .reserved {
+      color: #d63d4f;
+      font-weight: bold;
+    }
+
+    .available {
+      color: #15945a;
+      font-weight: bold;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .message {
+      padding: 12px;
+      border-radius: 10px;
+      margin-top: 15px;
+      background: #f3f3f3;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>💙 Administração — Chá do Miguel</h1>
+  <p>Controle das fraldas, mimos e reservas</p>
+</header>
+
+<div class="container">
+
+  <!-- LOGIN -->
+  <div id="loginArea" class="card login">
+    <h2>🔐 Acesso administrativo</h2>
+    <p>Entre com seu e-mail e sua senha.</p>
+
+    <label>E-mail</label>
+    <input type="email" id="email" placeholder="Seu e-mail">
+
+    <label>Senha</label>
+    <input type="password" id="senha" placeholder="Sua senha">
+
+    <button class="btn-login" onclick="entrar()">
+      Entrar
+    </button>
+
+    <div id="loginMsg" class="message hidden"></div>
+  </div>
+
+  <!-- PAINEL -->
+  <div id="painel" class="hidden">
+
+    <div class="card">
+      <div class="top">
+        <div>
+          <h2>🎁 Painel do Chá do Miguel</h2>
+          <p>Edite fraldas e mimos e acompanhe as reservas.</p>
+        </div>
+
+        <button class="btn-logout" onclick="sair()">
+          Sair
+        </button>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          🟢 Disponíveis: <span id="disponiveis">0</span>
+        </div>
+
+        <div class="stat">
+          🔴 Reservados: <span id="reservados">0</span>
+        </div>
+      </div>
+
+      <button class="btn-save" onclick="carregar()">
+        🔄 Atualizar
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="table-wrap">
+
+        <table>
+          <thead>
+            <tr>
+              <th>Nº</th>
+              <th>Fralda</th>
+              <th>Mimo</th>
+              <th>Convidada</th>
+              <th>Situação</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+
+          <tbody id="lista"></tbody>
+        </table>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+  const SUPABASE_URL =
+    "https://jqpkrfffqotvwacwrsqc.supabase.co";
+
+  /*
+    IMPORTANTE:
+    COLE AQUI A MESMA SUPABASE_KEY
+    QUE JÁ ESTÁ NO SEU index.html
+  */
+
+  const SUPABASE_KEY = "sb_publishable_-vj6ltl0umBpkT6YamC8Rw_SeVqWgVt";
+
+  const supabaseClient =
+    window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
+
+  async function entrar() {
+
+    const email =
+      document.getElementById("email").value.trim();
+
+    const senha =
+      document.getElementById("senha").value;
+
+    const msg =
+      document.getElementById("loginMsg");
+
+    if (!email || !senha) {
+      msg.textContent = "Digite seu e-mail e sua senha.";
+      msg.classList.remove("hidden");
+      return;
+    }
+
+    const { error } =
+      await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: senha
+      });
+
+    if (error) {
+      msg.textContent =
+        "Não foi possível entrar. Confira o e-mail e a senha.";
+
+      msg.classList.remove("hidden");
+      return;
+    }
+
+    document.getElementById("loginArea")
+      .classList.add("hidden");
+
+    document.getElementById("painel")
+      .classList.remove("hidden");
+
+    carregar();
+  }
+
+
+  async function sair() {
+
+    await supabaseClient.auth.signOut();
+
+    document.getElementById("painel")
+      .classList.add("hidden");
+
+    document.getElementById("loginArea")
+      .classList.remove("hidden");
+  }
+
+
+  async function carregar() {
+
+    const { data, error } =
+      await supabaseClient.rpc(
+        "listar_presentes_admin"
+      );
+
+    if (error) {
+      alert("Erro ao carregar os dados: " + error.message);
+      return;
+    }
+
+    const lista =
+      document.getElementById("lista");
+
+    lista.innerHTML = "";
+
+    let disponiveis = 0;
+    let reservados = 0;
+
+    data.forEach(item => {
+
+      if (item.reservado) {
+        reservados++;
+      } else {
+        disponiveis++;
+      }
+
+      const tr =
+        document.createElement("tr");
+
+      tr.innerHTML = `
+        <td><strong>${item.numero}</strong></td>
+
+        <td>
+          <input
+            id="fralda-${item.numero}"
+            value="${esc(item.fralda || "")}"
+          >
+        </td>
+
+        <td>
+          <input
+            id="mimo-${item.numero}"
+            value="${esc(item.mimo || "")}"
+          >
+        </td>
+
+        <td>
+          ${item.convidada
+            ? esc(item.convidada)
+            : "—"}
+        </td>
+
+        <td class="${item.reservado
+          ? "reserved"
+          : "available"}">
+
+          ${item.reservado
+            ? "🔴 Reservado"
+            : "🟢 Disponível"}
+
+        </td>
+
+        <td>
+
+          <button
+            class="btn-save"
+            onclick="salvar(${item.numero})">
+            Salvar
+          </button>
+
+          ${
+            item.reservado
+            ?
+            `<button
+              class="btn-release"
+              onclick="liberar(${item.numero})">
+              Liberar
+            </button>`
+            :
+            ""
+          }
+
+        </td>
+      `;
+
+      lista.appendChild(tr);
+    });
+
+    document.getElementById("disponiveis")
+      .textContent = disponiveis;
+
+    document.getElementById("reservados")
+      .textContent = reservados;
+  }
+
+
+  async function salvar(numero) {
+
+    const fralda =
+      document.getElementById(
+        "fralda-" + numero
+      ).value.trim();
+
+    const mimo =
+      document.getElementById(
+        "mimo-" + numero
+      ).value.trim();
+
+    const { data, error } =
+      await supabaseClient.rpc(
+        "atualizar_presente_admin",
+        {
+          p_numero: numero,
+          p_fralda: fralda,
+          p_mimo: mimo
+        }
+      );
+
+    if (error) {
+      alert("Erro ao salvar: " + error.message);
+      return;
+    }
+
+    alert(
+      "Número " + numero +
+      " atualizado com sucesso! 💙"
+    );
+
+    carregar();
+  }
+
+
+  async function liberar(numero) {
+
+    const confirmar =
+      confirm(
+        "Tem certeza que deseja liberar o número " +
+        numero +
+        " para outra convidada?"
+      );
+
+    if (!confirmar) {
+      return;
+    }
+
+    const { error } =
+      await supabaseClient.rpc(
+        "liberar_numero_admin",
+        {
+          p_numero: numero
+        }
+      );
+
+    if (error) {
+      alert(
+        "Erro ao liberar o número: " +
+        error.message
+      );
+      return;
+    }
+
+    alert(
+      "Número " +
+      numero +
+      " liberado com sucesso!"
+    );
+
+    carregar();
+  }
+
+
+  function esc(valor) {
+
+    return String(valor)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+
+  // Verifica se já existe uma sessão
+  async function verificarSessao() {
+
+    const { data } =
+      await supabaseClient.auth.getSession();
+
+    if (data.session) {
+
+      document.getElementById("loginArea")
+        .classList.add("hidden");
+
+      document.getElementById("painel")
+        .classList.remove("hidden");
+
+      carregar();
+    }
+  }
+
+  verificarSessao();
+
+</script>
+
+</body>
+</html>
