@@ -217,8 +217,10 @@
       <button class="btn-save" onclick="carregar()">
         🔄 Atualizar
       </button>
-    </div>
-
+  
+<button class="btn-save" onclick="salvarTodos()">
+  💾 Salvar todas as alterações
+</button>
     <div class="card">
       <div class="table-wrap">
 
@@ -449,7 +451,72 @@
 
     carregar();
   }
+async function salvarTodos() {
 
+  const confirmar = confirm(
+    "Deseja salvar todas as alterações de fraldas e mimos?"
+  );
+
+  if (!confirmar) {
+    return;
+  }
+
+  const botoes = document.querySelectorAll(
+    'button[onclick^="salvar("]'
+  );
+
+  let erros = 0;
+
+  for (const botao of botoes) {
+
+    const texto = botao.getAttribute("onclick");
+
+    const numero = parseInt(
+      texto.match(/\d+/)[0]
+    );
+
+    const fralda = document
+      .getElementById("fralda-" + numero)
+      .value
+      .trim();
+
+    const mimo = document
+      .getElementById("mimo-" + numero)
+      .value
+      .trim();
+
+    const { error } =
+      await supabaseClient.rpc(
+        "atualizar_presente_admin",
+        {
+          p_numero: numero,
+          p_fralda: fralda,
+          p_mimo: mimo
+        }
+      );
+
+    if (error) {
+      erros++;
+    }
+  }
+
+  if (erros === 0) {
+
+    alert(
+      "✅ Todas as alterações foram salvas com sucesso!"
+    );
+
+  } else {
+
+    alert(
+      "⚠️ Algumas alterações não puderam ser salvas. " +
+      "Quantidade de erros: " + erros
+    );
+
+  }
+
+  carregar();
+}
 
   async function liberar(numero) {
 
