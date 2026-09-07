@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chá do Miguel 💙</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #eaf6ff, #ffffff);
+    color: #234;
+}
+
+header {
+    background: linear-gradient(135deg, #69b7e8, #3d8fc4);
+    color: white;
+    text-align: center;
+    padding: 35px 20px;
+    box-shadow: 0 3px 12px rgba(0,0,0,.15);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 34px;
+}
+
+header p {
+    font-size: 18px;
+    margin: 10px 0 0;
+}
+
+.container {
+    max-width: 1000px;
+    margin: auto;
+    padding: 25px 15px;
+}
+
+.info {
+    background: white;
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 15px rgba(0,0,0,.08);
+    text-align: center;
+}
+
+.info strong {
+    color: #2980b9;
+}
+
+.search {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #b9dff5;
+    border-radius: 12px;
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.status {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.status span {
+    padding: 10px 16px;
+    border-radius: 20px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 15px;
+}
+
+.card {
+    background: white;
+    border-radius: 16px;
+    padding: 18px;
+    text-align: center;
+    box-shadow: 0 3px 12px rgba(0,0,0,.1);
+    border: 2px solid #d8edf9;
+    transition: .2s;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+}
+
+.number {
+    font-size: 30px;
+    font-weight: bold;
+    color: #2980b9;
+}
+
+.card h3 {
+    margin: 8px 0;
+}
+
+.card p {
+    margin: 6px 0;
+    font-size: 14px;
+}
+
+.available {
+    color: #188038;
+    font-weight: bold;
+}
+
+.reserved {
+    color: #b3261e;
+    font-weight: bold;
+}
+
+button {
+    border: 0;
+    border-radius: 10px;
+    padding: 11px 18px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.reserve-btn {
+    background: #2980b9;
+    color: white;
+    margin-top: 10px;
+}
+
+.reserve-btn:hover {
+    background: #216a99;
+}
+
+.reserve-btn:disabled {
+    background: #aaa;
+    cursor: not-allowed;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    width: 100%;
+    max-width: 450px;
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 5px 30px rgba(0,0,0,.3);
+}
+
+.modal h2 {
+    margin-top: 0;
+    color: #2980b9;
+}
+
+.modal input {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid #c9e4f3;
+    border-radius: 10px;
+    font-size: 16px;
+    margin: 10px 0 15px;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.cancel {
+    background: #ddd;
+}
+
+.confirm {
+    background: #2980b9;
+    color: white;
+}
+
+.loading {
+    text-align: center;
+    padding: 30px;
+    font-size: 18px;
+}
+
+footer {
+    text-align: center;
+    padding: 30px;
+    color: #777;
+}
+
+@media(max-width:500px) {
+    header h1 {
+        font-size: 27px;
+    }
+
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .card {
+        padding: 12px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>💙 Chá do Miguel 💙</h1>
+    <p>Escolha um número e participe desse momento especial!</p>
+</header>
+
+<div class="container">
+
+    <div class="info">
+        <p>
+            🍼 Escolha <strong>um número disponível</strong> abaixo.
+        </p>
+        <p>
+            Ao escolher, você verá qual fralda e qual mimo deverá levar.
+        </p>
+        <p>
+            Cada número pode ser escolhido por <strong>apenas uma convidada</strong>.
+        </p>
+    </div>
+
+    <input
+        type="text"
+        id="search"
+        class="search"
+        placeholder="🔎 Procurar um número..."
+        oninput="filtrar()"
+    >
+
+    <div class="status">
+        <span>🟢 Disponíveis: <strong id="disponiveis">0</strong></span>
+        <span>🔴 Reservados: <strong id="reservados">0</strong></span>
+    </div>
+
+    <div id="lista" class="grid">
+        <div class="loading">Carregando números...</div>
+    </div>
+
+</div>
+
+<footer>
+    💙 Chá do Miguel 💙<br>
+    Obrigado por fazer parte desse momento!
+</footer>
+
+<div id="modal" class="modal">
+
+    <div class="modal-content">
+
+        <h2>💙 Reservar número</h2>
+
+        <p id="numeroEscolhido"></p>
+
+        <p>
+            Digite seu nome para confirmar a escolha:
+        </p>
+
+        <input
+            type="text"
+            id="nome"
+            placeholder="Seu nome"
+            maxlength="100"
+        >
+
+        <div class="modal-buttons">
+            <button class="cancel" onclick="fecharModal()">
+                Cancelar
+            </button>
+
+            <button class="confirm" onclick="confirmarReserva()">
+                Confirmar escolha
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+// =====================================================
+// CONFIGURAÇÃO DO SUPABASE
+// =====================================================
+
+const SUPABASE_URL = "https://jqpkrfffqotvwacwrsqc.supabase.co";
+
+// COLOQUE AQUI A CHAVE PÚBLICA DO SUPABASE
+const SUPABASE_KEY = "sb_publishable_-vj6ltl0umBpkT6YamC8Rw_SeVqWgVt";
+
+const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
+
+// =====================================================
+// VARIÁVEIS
+// =====================================================
+
+let presentes = [];
+let numeroSelecionado = null;
+
+// =====================================================
+// CARREGAR NÚMEROS
+// =====================================================
+
+async function carregarPresentes() {
+
+    const lista = document.getElementById("lista");
+
+    lista.innerHTML = `
+        <div class="loading">
+            Carregando números...
+        </div>
+    `;
+
+    const { data, error } =
+        await supabaseClient.rpc("listar_presentes");
+
+    if (error) {
+
+        console.error(error);
+
+        lista.innerHTML = `
+            <div class="loading">
+                ❌ Não foi possível carregar os números.<br><br>
+                Verifique a configuração do Supabase.
+            </div>
+        `;
+
+        return;
+    }
+
+    presentes = data || [];
+
+    atualizarContadores();
+    mostrarPresentes();
+}
+
+// =====================================================
+// MOSTRAR PRESENTES
+// =====================================================
+
+function mostrarPresentes() {
+
+    const lista = document.getElementById("lista");
+
+    const pesquisa =
+        document.getElementById("search").value
+        .toLowerCase()
+        .trim();
+
+    let dados = presentes;
+
+    if (pesquisa) {
+        dados = presentes.filter(item =>
+            String(item.numero).includes(pesquisa)
+        );
+    }
+
+    if (dados.length === 0) {
+
+        lista.innerHTML = `
+            <div class="loading">
+                Nenhum número encontrado.
+            </div>
+        `;
+
+        return;
+    }
+
+    lista.innerHTML = dados.map(item => {
+
+        const reservado = item.reservado === true;
+
+        return `
+            <div class="card">
+
+                <div class="number">
+                    ${item.numero}
+                </div>
+
+                <h3>
+                    ${reservado ? "🔴 Reservado" : "🟢 Disponível"}
+                </h3>
+
+                <p>
+                    <strong>Fralda:</strong><br>
+                    ${item.fralda || "A definir"}
+                </p>
+
+                <p>
+                    <strong>Mimo:</strong><br>
+                    ${item.mimo || "A definir"}
+                </p>
+
+                ${
+                    reservado
+                    ?
+                    `<button class="reserve-btn" disabled>
+                        Já reservado
+                    </button>`
+                    :
+                    `<button
+                        class="reserve-btn"
+                        onclick="abrirModal(${item.numero})">
+                        Escolher este número
+                    </button>`
+                }
+
+            </div>
+        `;
+
+    }).join("");
+}
+
+// =====================================================
+// CONTADORES
+// =====================================================
+
+function atualizarContadores() {
+
+    const disponiveis =
+        presentes.filter(item => !item.reservado).length;
+
+    const reservados =
+        presentes.filter(item => item.reservado).length;
+
+    document.getElementById("disponiveis").textContent =
+        disponiveis;
+
+    document.getElementById("reservados").textContent =
+        reservados;
+}
+
+// =====================================================
+// PESQUISA
+// =====================================================
+
+function filtrar() {
+    mostrarPresentes();
+}
+
+// =====================================================
+// MODAL
+// =====================================================
+
+function abrirModal(numero) {
+
+    numeroSelecionado = numero;
+
+    document.getElementById("numeroEscolhido").innerHTML =
+        `Você escolheu o número <strong>${numero}</strong>.`;
+
+    document.getElementById("nome").value = "";
+
+    document.getElementById("modal").style.display = "flex";
+
+    setTimeout(() => {
+        document.getElementById("nome").focus();
+    }, 100);
+}
+
+function fecharModal() {
+
+    document.getElementById("modal").style.display = "none";
+
+    numeroSelecionado = null;
+}
+
+// =====================================================
+// RESERVAR
+// =====================================================
+
+async function confirmarReserva() {
+
+    const nome =
+        document.getElementById("nome").value.trim();
+
+    if (!nome) {
+
+        alert("Por favor, digite seu nome.");
+
+        return;
+    }
+
+    if (!numeroSelecionado) {
+
+        alert("Número inválido.");
+
+        return;
+    }
+
+    const botoes =
+        document.querySelectorAll(".modal button");
+
+    botoes.forEach(botao => botao.disabled = true);
+
+    const { data, error } =
+        await supabaseClient.rpc(
+            "reservar_numero",
+            {
+                p_numero: numeroSelecionado,
+                p_convidada: nome
+            }
+        );
+
+    botoes.forEach(botao => botao.disabled = false);
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "Não foi possível realizar a reserva. Tente novamente."
+        );
+
+        return;
+    }
+
+    const resultado = data;
+
+    if (!resultado || resultado.sucesso !== true) {
+
+        alert(
+            "⚠️ Esse número acabou de ser reservado por outra pessoa. Por favor, escolha outro."
+        );
+
+        fecharModal();
+
+        await carregarPresentes();
+
+        return;
+    }
+
+    alert(
+        `💙 Tudo certo, ${nome}!\n\n` +
+        `Número ${resultado.numero} reservado com sucesso!\n\n` +
+        `Fralda: ${resultado.fralda}\n` +
+        `Mimo: ${resultado.mimo}`
+    );
+
+    fecharModal();
+
+    await carregarPresentes();
+}
+
+// =====================================================
+// ATUALIZAÇÃO AUTOMÁTICA
+// =====================================================
+
+setInterval(() => {
+    carregarPresentes();
+}, 15000);
+
+// =====================================================
+// INICIAR
+// =====================================================
+
+carregarPresentes();
+
+</script>
+
+</body>
+</html>
