@@ -6,7 +6,13 @@
 <title>Chá do Miguel 💙</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<audio id="musicaFundo" loop>
+  <source src="musica.mp3" type="audio/mpeg">
+</audio>
 
+<button id="botaoMusica" onclick="alternarMusica()">
+  🎵 Tocar música
+</button>
 <style>
 * {
     box-sizing: border-box;
@@ -651,6 +657,18 @@ function salvarCartao(nome, numero, fralda, mimo) {
   link.click();
 
   alert("💙 Seu cartão foi preparado para salvar no celular!");
+}
+    function alternarMusica() {
+  const musica = document.getElementById("musicaFundo");
+  const botao = document.getElementById("botaoMusica");
+
+  if (musica.paused) {
+    musica.play();
+    botao.innerHTML = "🔇 Desligar música";
+  } else {
+    musica.pause();
+    botao.innerHTML = "🎵 Tocar música";
+  }
 }
 // =====================================================
 // ATUALIZAÇÃO AUTOMÁTICA
